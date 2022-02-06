@@ -10,14 +10,13 @@ import (
 	"github.com/gonutz/wui/v2"
 )
 
-const (
-	tileSize        = 90
-	thinBorderSize  = 3
-	thickBorderSize = 3 * thinBorderSize
-	boardSize       = 4*thickBorderSize + 6*thinBorderSize + 9*tileSize
-)
-
 var (
+	tileSize         = 90
+	thinBorderSize   = 3
+	thickBorderSize  = 3 * thinBorderSize
+	boardSize        = 4*thickBorderSize + 6*thinBorderSize + 9*tileSize
+	mediumFontHeight = tileSize / 2
+
 	backColor      = wui.RGB(64, 64, 64)
 	hotColor       = wui.RGB(64, 64, 192)
 	borderColor    = wui.RGB(192, 192, 192)
@@ -33,7 +32,6 @@ func main() {
 		Height: tileSize - tileSize/10,
 	})
 
-	const mediumFontHeight = tileSize / 2
 	mediumFont, _ := wui.NewFont(wui.FontDesc{
 		Name:   "Tahoma",
 		Height: mediumFontHeight,
@@ -132,6 +130,7 @@ func main() {
 			canvas.TextRectFormat(0, 0, boardSize, boardSize, `
 F1 - Help On/Off
 F2 - New Game
+Ctrl +/- - Zoom In/Out
 Enter - Check Solution
 Number - Enter Number
 Shift+Number - Pencil Mark Corner
@@ -463,6 +462,36 @@ Escape - Clear Selection
 		board.Paint()
 	}
 
+	zoom := func(delta int) {
+		tileSize += delta
+		if tileSize < 30 {
+			tileSize = 30
+		}
+
+		thinBorderSize = 3
+		thickBorderSize = 3 * thinBorderSize
+		boardSize = 4*thickBorderSize + 6*thinBorderSize + 9*tileSize
+		mediumFontHeight = tileSize / 2
+		window.SetInnerSize(boardSize, boardSize)
+
+		largeFont, _ = wui.NewFont(wui.FontDesc{
+			Name:   "Tahoma",
+			Height: tileSize - tileSize/10,
+		})
+
+		mediumFont, _ = wui.NewFont(wui.FontDesc{
+			Name:   "Tahoma",
+			Height: mediumFontHeight,
+		})
+
+		smallFont, _ = wui.NewFont(wui.FontDesc{
+			Name:   "Tahoma",
+			Height: tileSize / 4,
+		})
+	}
+	zoomIn := func() { zoom(1) }
+	zoomOut := func() { zoom(-1) }
+
 	window.SetShortcut(putNumber(1), wui.Key1)
 	window.SetShortcut(putNumber(2), wui.Key2)
 	window.SetShortcut(putNumber(3), wui.Key3)
@@ -526,6 +555,10 @@ Escape - Clear Selection
 	window.SetShortcut(newGame, wui.KeyF2)
 	window.SetShortcut(toggleHelp, wui.KeyF1)
 	window.SetShortcut(checkGame, wui.KeyReturn)
+	window.SetShortcut(zoomIn, wui.KeyControl, wui.KeyAdd)
+	window.SetShortcut(zoomIn, wui.KeyControl, wui.KeyOEMPlus)
+	window.SetShortcut(zoomOut, wui.KeyControl, wui.KeySubtract)
+	window.SetShortcut(zoomOut, wui.KeyControl, wui.KeyOEMMinus)
 
 	var (
 		selecting    bool
