@@ -769,36 +769,35 @@ type field struct {
 func generateNewGame(givenDigits int) (solution, start sudoku.Game) {
 	rand.Seed(time.Now().UnixNano())
 
-	n := [9]int{1, 2, 3, 4, 5, 6, 7, 8, 9}
-	for i := range n {
-		j := i + rand.Intn(9-i)
-		n[i], n[j] = n[j], n[i]
+	// Find a solvable game, our algorithm for this has a 10% chance of
+	// generating one.
+	for {
+		var err error
+		solution, err = tryGeneratingGame()
+		if err == nil {
+			break
+		}
 	}
 
-	game := sudoku.Game{
-		n[0], n[1], n[2], n[3], n[4], n[5], n[6], n[7], n[8],
-		n[6], n[7], n[8], n[0], n[1], n[2], n[3], n[4], n[5],
-		n[3], n[4], n[5], n[6], n[7], n[8], n[0], n[1], n[2],
-		n[8], n[0], n[1], n[2], n[3], n[4], n[5], n[6], n[7],
-		n[5], n[6], n[7], n[8], n[0], n[1], n[2], n[3], n[4],
-		n[2], n[3], n[4], n[5], n[6], n[7], n[8], n[0], n[1],
-		n[7], n[8], n[0], n[1], n[2], n[3], n[4], n[5], n[6],
-		n[4], n[5], n[6], n[7], n[8], n[0], n[1], n[2], n[3],
-		n[1], n[2], n[3], n[4], n[5], n[6], n[7], n[8], n[0],
+	// Randomize this game some more.
+	swapDigits := [9]int{1, 2, 3, 4, 5, 6, 7, 8, 9}
+	shuffle(swapDigits[:])
+	for i := range solution {
+		solution[i] = swapDigits[solution[i]-1]
 	}
 
 	for i := 0; i < 1000; i++ {
 		a := rand.Intn(3) * 3
 		b := rand.Intn(3) + a
 		if rand.Intn(2) == 0 {
-			swapLines(&game, a, b)
+			swapLines(&solution, a, b)
 		} else {
-			swapCols(&game, a, b)
+			swapCols(&solution, a, b)
 		}
 	}
 
-	solution = game
-
+	// Remove digits while keeping the game uniquly solvable.
+	start = solution
 	have := 81
 	want := givenDigits
 
@@ -810,20 +809,115 @@ func generateNewGame(givenDigits int) (solution, start sudoku.Game) {
 	for len(rest) > 0 && have != want {
 		n := rand.Intn(len(rest))
 		i := rest[n]
-		was := game[i]
-		game[i] = 0
-		if sudoku.HasUniqueSolution(game) {
+		was := start[i]
+		start[i] = 0
+		if sudoku.HasUniqueSolution(start) {
 			have--
 		} else {
-			game[i] = was
+			start[i] = was
 		}
 		rest[0], rest[n] = rest[n], rest[0]
 		rest = rest[1:]
 	}
 
-	start = game
-
 	return
+}
+
+func tryGeneratingGame() (sudoku.Game, error) {
+	// First row is always fixed as 1..9. We later alter the digits randomly.
+	game := sudoku.Game{1, 2, 3, 4, 5, 6, 7, 8, 9}
+
+	// For box 1 the 6 digits 4..9 must be placed below the 1,2,3. Randomize
+	// their positions.
+	restBox1 := [6]int{4, 5, 6, 7, 8, 9}
+	shuffle(restBox1[:])
+	copy(game[9:], restBox1[:3])
+	copy(game[18:], restBox1[3:])
+
+	// With box 1 filled, we know which digits must go into the bottom 6 rows
+	// of column 1. They are the digits in box 1 which are not in column 1
+	// already. Randomize their positions.
+	restCol1 := [6]int{game[1], game[2], game[10], game[11], game[19], game[20]}
+	shuffle(restCol1[:])
+	game[27] = restCol1[0]
+	game[36] = restCol1[1]
+	game[45] = restCol1[2]
+	game[54] = restCol1[3]
+	game[63] = restCol1[4]
+	game[72] = restCol1[5]
+
+	// Now we have to place the numbers 1,2,3 in box 2 and 3, in the lower two
+	// rows. Randomize their positions.
+	box2 := [3]int{1, 2, 3}
+	box3 := box2
+	shuffle(box2[:])
+	shuffle(box3[:])
+
+	game[12+rand.Intn(2)*9] = box2[0]
+	game[13+rand.Intn(2)*9] = box2[1]
+	game[14+rand.Intn(2)*9] = box2[2]
+
+	if contains(game[12:15], box3[0]) {
+		game[24] = box3[0]
+	} else {
+		game[15] = box3[0]
+	}
+	if contains(game[12:15], box3[1]) {
+		game[25] = box3[1]
+	} else {
+		game[16] = box3[1]
+	}
+	if contains(game[12:15], box3[2]) {
+		game[26] = box3[2]
+	} else {
+		game[17] = box3[2]
+	}
+
+	// The same as we did with 1,2,3 from box 1, row 1 has to happen for box 1,
+	// column 1. We place two sets of these digits randomly in column 2 and 3 of
+	// boxes 4 and 7.
+	box4 := [3]int{game[0], game[9], game[18]}
+	box7 := box4
+	shuffle(box4[:])
+	shuffle(box7[:])
+
+	game[28+rand.Intn(2)] = box4[0]
+	game[37+rand.Intn(2)] = box4[1]
+	game[46+rand.Intn(2)] = box4[2]
+
+	if contains([]int{game[28], game[37], game[46]}, box7[0]) {
+		game[56] = box7[0]
+	} else {
+		game[55] = box7[0]
+	}
+	if contains([]int{game[28], game[37], game[46]}, box7[1]) {
+		game[65] = box7[1]
+	} else {
+		game[64] = box7[1]
+	}
+	if contains([]int{game[28], game[37], game[46]}, box7[2]) {
+		game[74] = box7[2]
+	} else {
+		game[71] = box7[2]
+	}
+
+	// Chances are about 1 in 10 that this created a solvable game.
+	return sudoku.Solve(game)
+}
+
+func shuffle(x []int) {
+	for i := range x {
+		j := i + rand.Intn(len(x)-i)
+		x[i], x[j] = x[j], x[i]
+	}
+}
+
+func contains(list []int, x int) bool {
+	in := false
+	for _, n := range list {
+		in = in || x == n
+	}
+	return in
 }
 
 func swapLines(g *sudoku.Game, a, b int) {
