@@ -3,7 +3,9 @@ package main
 import (
 	"math/rand"
 	"strconv"
+	"syscall"
 	"time"
+	"unsafe"
 
 	"github.com/gonutz/sudoku"
 	"github.com/gonutz/w32/v2"
@@ -139,6 +141,7 @@ Control+Number - Pencil Mark Center
 Backspace - Clear Number/Pencil Marks
 Mouse/Arrow Keys - Select Cells
 Escape - Clear Selection
+Ctrl+C - Copy Game to Clipboard as Text
 `, wui.FormatCenter, textColor)
 		}
 	})
@@ -493,6 +496,30 @@ Escape - Clear Selection
 	zoomIn := func() { zoom(1) }
 	zoomOut := func() { zoom(-1) }
 
+	copyBoard := func() {
+		var s string
+		for y := 0; y < 9; y++ {
+			for x := 0; x < 9; x++ {
+				n := b[x][y].number
+				if n == 0 {
+					s += "."
+				} else {
+					s += strconv.Itoa(n)
+				}
+				if x < 8 && x%3 == 2 {
+					s += " "
+				}
+			}
+			if y < 8 {
+				s += "\r\n"
+				if y%3 == 2 {
+					s += "\r\n"
+				}
+			}
+		}
+		copyTextToClipboard(s)
+	}
+
 	window.SetShortcut(putNumber(1), wui.Key1)
 	window.SetShortcut(putNumber(2), wui.Key2)
 	window.SetShortcut(putNumber(3), wui.Key3)
@@ -560,6 +587,7 @@ Escape - Clear Selection
 	window.SetShortcut(zoomIn, wui.KeyControl, wui.KeyOEMPlus)
 	window.SetShortcut(zoomOut, wui.KeyControl, wui.KeySubtract)
 	window.SetShortcut(zoomOut, wui.KeyControl, wui.KeyOEMMinus)
+	window.SetShortcut(copyBoard, wui.KeyControl, wui.KeyC)
 
 	var (
 		selecting    bool
@@ -814,4 +842,40 @@ func swapCols(g *sudoku.Game, a, b int) {
 			g[a+i*9], g[b+i*9] = g[b+i*9], g[a+i*9]
 		}
 	}
+}
+
+func copyTextToClipboard(text string) {
+	if w32.OpenClipboard(0) {
+		defer w32.CloseClipboard()
+		w32.EmptyClipboard()
+		data := syscall.StringToUTF16(text)
+		clipBuffer := w32.GlobalAlloc(w32.GMEM_DDESHARE, uint32(len(data)*2))
+		w32.MoveMemory(
+			w32.GlobalLock(clipBuffer),
+			unsafe.Pointer(&data[0]),
+			uint32(len(data)*2),
+		)
+		w32.GlobalUnlock(clipBuffer)
+		w32.SetClipboardData(
+			w32.CF_UNICODETEXT,
+			w32.HANDLE(unsafe.Pointer(clipBuffer)),
+		)
+	}
+}
+
+func getClipboardText() (text string) {
+	if w32.OpenClipboard(0) {
+		defer w32.CloseClipboard()
+		data := (*uint16)(unsafe.Pointer(w32.GetClipboardData(w32.CF_UNICODETEXT)))
+		if data == nil {
+			return
+		}
+		var characters []uint16
+		for *data != 0 {
+			characters = append(characters, *data)
+			data = (*uint16)(unsafe.Pointer(uintptr(unsafe.Pointer(data)) + 2))
+		}
+		text = syscall.UTF16ToString(characters)
+	}
+	return
 }
