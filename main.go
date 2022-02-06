@@ -17,13 +17,14 @@ var (
 	boardSize        = 4*thickBorderSize + 6*thinBorderSize + 9*tileSize
 	mediumFontHeight = tileSize / 2
 
-	backColor      = wui.RGB(64, 64, 64)
-	hotColor       = wui.RGB(64, 64, 192)
-	borderColor    = wui.RGB(192, 192, 192)
-	textColor      = wui.RGB(255, 255, 255)
-	fixedColor     = wui.RGB(192, 192, 255)
-	highlightColor = wui.RGB(255, 192, 192)
-	gameMode       = false
+	backColor          = wui.RGB(64, 64, 64)
+	hotColor           = wui.RGB(64, 64, 192)
+	borderColor        = wui.RGB(192, 192, 192)
+	textColor          = wui.RGB(255, 255, 255)
+	fixedColor         = wui.RGB(192, 192, 255)
+	highlightBackColor = wui.RGB(92, 92, 64)
+
+	gameMode = false
 )
 
 func main() {
@@ -94,7 +95,7 @@ func main() {
 							color = fixedColor
 						}
 						if wantHighlight(f.number) {
-							color = highlightColor
+							canvas.FillRect(x, y, tileSize, tileSize, highlightBackColor)
 						}
 						canvas.TextOut(x+(tileSize-w)/2, y+(tileSize-h)/2, text, color)
 					} else {
