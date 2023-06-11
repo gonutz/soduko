@@ -138,7 +138,7 @@ Enter - Check Solution
 Number - Enter Number
 Shift+Number - Pencil Mark Corner
 Control+Number - Pencil Mark Center
-Backspace - Clear Number/Pencil Marks
+Delete/Backspace - Clear Number/Pencil Marks
 Mouse/Arrow Keys - Select Cells
 Escape - Clear Selection
 Ctrl+C - Copy Game to Clipboard as Text
@@ -566,10 +566,13 @@ Ctrl+C - Copy Game to Clipboard as Text
 	window.SetShortcut(putCornerPencilMark(8), wui.KeyShift, wui.Key8)
 	window.SetShortcut(putCornerPencilMark(9), wui.KeyShift, wui.Key9)
 	window.SetShortcut(clearFields, wui.KeyBack)
+	window.SetShortcut(clearFields, wui.KeyDelete)
 	window.SetShortcut(clearFields, wui.Key0)
 	window.SetShortcut(clearFields, wui.KeyNum0)
 	window.SetShortcut(clearCorners, wui.KeyBack, wui.KeyShift)
+	window.SetShortcut(clearCorners, wui.KeyDelete, wui.KeyShift)
 	window.SetShortcut(clearCenter, wui.KeyBack, wui.KeyControl)
+	window.SetShortcut(clearCenter, wui.KeyDelete, wui.KeyControl)
 	window.SetShortcut(expandSelection(1, 0), wui.KeyRight, wui.KeyShift)
 	window.SetShortcut(expandSelection(-1, 0), wui.KeyLeft, wui.KeyShift)
 	window.SetShortcut(expandSelection(0, 1), wui.KeyDown, wui.KeyShift)
